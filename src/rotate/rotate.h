@@ -151,15 +151,16 @@ rotate_gcd(RandomAccessIterator first, RandomAccessIterator middle, RandomAccess
     typedef typename std::iterator_traits<RandomAccessIterator>::difference_type difference_type;
     typedef typename std::iterator_traits<RandomAccessIterator>::value_type value_type;
 
+    const difference_type n = last - first;
     const difference_type k = middle - first;
-    const difference_type n = last - middle;
-    if (k == n) {
+
+    if (k == n - k) {
         std::swap_ranges(first, middle, middle);
         return middle;
     }
 
-    const difference_type g = algo_gcd(k, n);
-    for (RandomAccessIterator p = first + g; p != first;) {
+    const difference_type ncycles = algo_gcd(k, n);
+    for (RandomAccessIterator p = first + ncycles; p != first;) {
         value_type t(std::move(*--p));
         RandomAccessIterator i = p;
         RandomAccessIterator j = i + k;
@@ -173,9 +174,11 @@ rotate_gcd(RandomAccessIterator first, RandomAccessIterator middle, RandomAccess
             else
                 j = first + (k - d);
         } while (j != p);
+
         *i = std::move(t);
     }
-    return first + n;
+
+    return first + (n - k);
 }
 
 

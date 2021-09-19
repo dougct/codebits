@@ -93,6 +93,7 @@ void check_correcness(size_t n, size_t k) {
     std::vector<int> v_fwd(v_std.begin(), v_std.end());
     std::vector<int> v_bid(v_std.begin(), v_std.end());
     std::vector<int> v_rand(v_std.begin(), v_std.end());
+    std::vector<int> v_rs(v_std.begin(), v_std.end());
     
     auto s = std::rotate(v_std.begin(), v_std.begin() + k, v_std.end());
     
@@ -107,6 +108,11 @@ void check_correcness(size_t n, size_t k) {
     auto r = rotate_gcd_stepanov(v_rand.begin(), v_rand.begin() + k, v_rand.end());
     assert(v_rand == v_std);
     assert(*r == *s);
+
+    auto rs = rotate_gcd(v_rs.begin(), v_rs.begin() + k, v_rs.end());
+    assert(v_rs == v_std);
+    assert(*rs == *s);
+
 }
 
 
