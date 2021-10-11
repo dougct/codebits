@@ -7,9 +7,9 @@
 #include <list>
 #include <numeric>
 #include <random>
+#include <tuple>
 #include <type_traits>
 #include <vector>
-#include <tuple>
 
 #include "rotate.h"
 #include "timing.h"
@@ -119,8 +119,9 @@ int main() {
     auto vec_bid_time = eval_rotate_bid(vec_bid.begin(), vec_bid_kth, vec_bid.end());
     total_vec_bid += vec_bid_time;
 
-    // Evaluate rotate gdc with vector, since only vector supports random access iterators
-    
+    // Evaluate rotate gdc with vector, since only vector supports random access
+    // iterators
+
     std::vector<int> vec_gcd(nums.begin(), nums.end());
     auto vec_gcd_kth = vec_gcd.begin();
     std::advance(vec_gcd_kth, k);
@@ -131,16 +132,22 @@ int main() {
   std::cout << std::setprecision(4) << std::fixed;
 
   std::cout << "Algorithm: rotate_forward" << std::endl;
-  std::cout << "    Data structure: fwd_list: " << total_fwd_list_fwd / times << std::endl;
-  std::cout << "    Data structure: list: " << total_lst_fwd / times << std::endl;
-  std::cout << "    Data structure: vector: " << total_vec_fwd / times << std::endl;
+  std::cout << "    Data structure: fwd_list: " << total_fwd_list_fwd / times
+            << std::endl;
+  std::cout << "    Data structure: list: " << total_lst_fwd / times
+            << std::endl;
+  std::cout << "    Data structure: vector: " << total_vec_fwd / times
+            << std::endl;
 
   std::cout << "Algorithm: rotate_bidirectional" << std::endl;
-  std::cout << "    Data structure: list: " << total_lst_bid / times << std::endl;
-  std::cout << "    Data structure: vector: " << total_vec_bid / times << std::endl;
+  std::cout << "    Data structure: list: " << total_lst_bid / times
+            << std::endl;
+  std::cout << "    Data structure: vector: " << total_vec_bid / times
+            << std::endl;
 
   std::cout << "Algorithm: rotate_gcd" << std::endl;
-  std::cout << "    Data structure: vector: " << total_vec_gcd / times << std::endl;
+  std::cout << "    Data structure: vector: " << total_vec_gcd / times
+            << std::endl;
 
   return 0;
 }

@@ -2,20 +2,19 @@
 #include <numeric>
 #include <random>
 
-
 template <typename I>
 void print_range(I first, I last) {
-    while (first != last) {
-        std::cout << *first << " ";
-        ++first;
-    }
-    std::cout << std::endl;
+  while (first != last) {
+    std::cout << *first << " ";
+    ++first;
+  }
+  std::cout << std::endl;
 }
 
 template <typename I>
 void random_iota(I first, I last) {
-    std::iota(first, last, 0);
-    std::shuffle(first, last, std::mt19937{std::random_device{}()});
+  std::iota(first, last, 0);
+  std::shuffle(first, last, std::mt19937{std::random_device{}()});
 }
 
 int rand_int(int lower, int upper) {
