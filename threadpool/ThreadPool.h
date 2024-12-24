@@ -10,6 +10,9 @@
 #include <utility>
 #include <vector>
 
+// The implementations below are based on Sean Parent's talk about Concurrency:
+// https://www.youtube.com/watch?v=zULU6Hhp42w
+
 class SimpleTaskQueue {
   std::deque<std::function<void()>> _queue;
   std::mutex _mutex;
@@ -76,7 +79,7 @@ class SimpleThreadPool {
   }
 
   ~SimpleThreadPool() {
-    _queue.done();  // XXX: Without this we hand in the dtor
+    _queue.done();  // XXX: Without this we hang in the dtor
     for (auto& t : _threads) {
       t.join();
     }
