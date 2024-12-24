@@ -70,10 +70,12 @@ void check_correcness(size_t n, size_t k) {
 int main() {
   std::ios_base::sync_with_stdio(false);
 
+  std::cout << "Evaluating rotate algorithms..." << std::endl;
+
   double total_fwd_list_fwd = 0.0, total_lst_fwd = 0.0, total_vec_fwd = 0.0;
   double total_lst_bid = 0.0, total_vec_bid = 0.0;
   double total_vec_gcd = 0.0;
-  auto n = 1000000, times = 100;
+  auto n = 1000000, times = 300;
   for (int i = 0; i < times; ++i) {
     // How many elements we're going to rotate
     auto k = rand_int(0, n - 1);
@@ -133,21 +135,21 @@ int main() {
 
   std::cout << "Algorithm: rotate_forward" << std::endl;
   std::cout << "    Data structure: fwd_list: " << total_fwd_list_fwd / times
-            << std::endl;
+            << "ms" << std::endl;
   std::cout << "    Data structure: list: " << total_lst_fwd / times
-            << std::endl;
+            << "ms" << std::endl;
   std::cout << "    Data structure: vector: " << total_vec_fwd / times
-            << std::endl;
+            << "ms" << std::endl;
 
   std::cout << "Algorithm: rotate_bidirectional" << std::endl;
   std::cout << "    Data structure: list: " << total_lst_bid / times
-            << std::endl;
+            << "ms" << std::endl;
   std::cout << "    Data structure: vector: " << total_vec_bid / times
-            << std::endl;
+            << "ms" << std::endl;
 
   std::cout << "Algorithm: rotate_gcd" << std::endl;
   std::cout << "    Data structure: vector: " << total_vec_gcd / times
-            << std::endl;
+            << "ms" << std::endl;
 
   return 0;
 }
