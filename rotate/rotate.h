@@ -135,9 +135,9 @@ Integral algo_gcd(Integral x, Integral y) {
 
 template <typename RandAcIt>
 RandAcIt rotate_gcd(RandAcIt first, RandAcIt middle, RandAcIt last) {
-  typedef
-      typename std::iterator_traits<RandAcIt>::difference_type difference_type;
-  typedef typename std::iterator_traits<RandAcIt>::value_type value_type;
+  using difference_type =
+      typename std::iterator_traits<RandAcIt>::difference_type;
+  using value_type = typename std::iterator_traits<RandAcIt>::value_type;
 
   const difference_type n = last - first;
   const difference_type k = middle - first;
@@ -191,9 +191,9 @@ void rotate_cycle(RandAcIt first,
 
 template <typename RandAcIt>
 RandAcIt rotate_gcd_stepanov(RandAcIt first, RandAcIt middle, RandAcIt last) {
-  typedef
-      typename std::iterator_traits<RandAcIt>::difference_type difference_type;
-  typedef typename std::iterator_traits<RandAcIt>::value_type value_type;
+  using difference_type =
+      typename std::iterator_traits<RandAcIt>::difference_type;
+  using value_type = typename std::iterator_traits<RandAcIt>::value_type;
 
   const difference_type n = last - first;
   const difference_type k = middle - first;
