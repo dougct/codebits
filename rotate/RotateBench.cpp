@@ -5,8 +5,8 @@
 
 #include <benchmark/benchmark.h>
 
-#include "rotate.h"
-#include "utils.h"
+#include "Utils.h"
+#include "Rotate.h"
 
 template <typename Container>
 Container prepare_data(size_t n) {

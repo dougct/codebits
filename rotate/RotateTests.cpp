@@ -3,8 +3,8 @@
 
 #include <gtest/gtest.h>
 
-#include "rotate.h"
-#include "utils.h"
+#include "Rotate.h"
+#include "Utils.h"
 
 class RotateTest : public ::testing::Test {
  protected:
