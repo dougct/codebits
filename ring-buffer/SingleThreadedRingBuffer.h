@@ -12,6 +12,13 @@
 // Lock-free since producer single consumer queue
 template <class T>
 struct SingleThreadedRingBuffer {
+ private:
+  const size_t size_;
+  T* const records_;
+  std::atomic<size_t> readIndex_;
+  std::atomic<size_t> writeIndex_;
+
+ public:
   typedef T value_type;
 
   // Avoind copying
@@ -49,6 +56,36 @@ struct SingleThreadedRingBuffer {
     std::free(records_);
   }
 
+  bool empty() const { return readIndex_ == writeIndex_; }
+
+  bool full() const {
+    auto nextRecord = writeIndex_ + 1;
+    if (nextRecord == size_) {
+      nextRecord = 0;
+    }
+    if (nextRecord != readIndex_) {
+      return false;
+    }
+
+    return true;
+  }
+
+  // If called by consumer, then true size may be more because producer may
+  // be adding items concurrently.
+  // If called by producer, then true size may be less because consumer may
+  // be removing items concurrently.
+  // It is undefined to call this from any other thread.
+  size_t sizeEstimate() const {
+    int ret = writeIndex_ - readIndex_;
+    if (ret < 0) {
+      ret += size_;
+    }
+    return ret;
+  }
+
+  // Maximum number of items in the queue.
+  size_t capacity() const { return size_ - 1; }
+
   template <class... Args>
   bool push(Args&&... recordArgs) {
     const auto currentWrite = writeIndex_.load();
@@ -66,6 +103,22 @@ struct SingleThreadedRingBuffer {
     return false;
   }
 
+  // The queue must not be empty
+  bool pop(T& record) {
+    if (empty()) {
+      return false;
+    }
+
+    const auto currentRead = readIndex_.load();
+    auto nextRecord = currentRead + 1;
+    if (nextRecord == size_) {
+      nextRecord = 0;
+    }
+    record = std::move(records_[currentRead]);
+    readIndex_ = nextRecord;
+    return true;
+  }
+
   // Returns a pointer to the value at the front of the queue (for use in-place)
   T* front() {
     const auto currentRead = readIndex_.load();
@@ -75,56 +128,4 @@ struct SingleThreadedRingBuffer {
     }
     return &records_[currentRead];
   }
-
-  // The queue must not be empty
-  void pop() {
-    const auto currentRead = readIndex_.load();
-    assert(currentRead != writeIndex_);
-
-    auto nextRecord = currentRead + 1;
-    if (nextRecord == size_) {
-      nextRecord = 0;
-    }
-    records_[currentRead].~T();
-    readIndex_ = nextRecord;
-  }
-
-  bool empty() const {
-    return readIndex_ == writeIndex_;
-  }
-
-  bool full() const {
-    auto nextRecord = writeIndex_ + 1;
-    if (nextRecord == size_) {
-      nextRecord = 0;
-    }
-    if (nextRecord != readIndex_) {
-      return false;
-    }
-    // The queue is full
-    return true;
-  }
-
-  // * If called by consumer, then true size may be more (because producer may
-  //   be adding items concurrently).
-  // * If called by producer, then true size may be less (because consumer may
-  //   be removing items concurrently).
-  // * It is undefined to call this from any other thread.
-  size_t sizeEstimate() const {
-    int ret = writeIndex_ - readIndex_;
-    if (ret < 0) {
-      ret += size_;
-    }
-    return ret;
-  }
-
-  // Maximum number of items in the queue.
-  size_t capacity() const { return size_ - 1; }
-
- private:
-  const size_t size_;
-  T* const records_;
-  std::atomic<size_t> readIndex_;
-  std::atomic<size_t> writeIndex_;
 };
-

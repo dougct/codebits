@@ -12,6 +12,25 @@
 // Lock-free since producer single consumer queue
 template <class T>
 struct RingBuffer {
+ private:
+#ifdef __cpp_lib_hardware_interference_size
+  static constexpr size_t kCacheLineSize =
+      std::hardware_destructive_interference_size;
+#else
+  static constexpr size_t kCacheLineSize = 64;
+#endif
+  using AtomicIndex = std::atomic<size_t>;
+
+  char pad0_[kCacheLineSize];
+  const uint32_t size_;
+  T* const records_;
+
+  alignas(kCacheLineSize) AtomicIndex readIndex_;
+  alignas(kCacheLineSize) AtomicIndex writeIndex_;
+
+  char pad1_[kCacheLineSize - sizeof(AtomicIndex)];
+
+ public:
   typedef T value_type;
 
   // Avoind copying
@@ -49,46 +68,6 @@ struct RingBuffer {
     std::free(records_);
   }
 
-  template <class... Args>
-  bool push(Args&&... recordArgs) {
-    const auto currentWrite = writeIndex_.load(std::memory_order_relaxed);
-    auto nextRecord = currentWrite + 1;
-    if (nextRecord == size_) {
-      nextRecord = 0;
-    }
-    if (nextRecord != readIndex_.load(std::memory_order_acquire)) {
-      new (&records_[currentWrite]) T(std::forward<Args>(recordArgs)...);
-      writeIndex_.store(nextRecord, std::memory_order_release);
-      return true;
-    }
-
-    // The queue is full
-    return false;
-  }
-
-  // Returns a pointer to the value at the front of the queue (for use in-place)
-  T* front() {
-    auto const currentRead = readIndex_.load(std::memory_order_relaxed);
-    if (currentRead == writeIndex_.load(std::memory_order_acquire)) {
-      // The queue is empty
-      return nullptr;
-    }
-    return &records_[currentRead];
-  }
-
-  // The queue must not be empty
-  void pop() {
-    const auto currentRead = readIndex_.load(std::memory_order_relaxed);
-    assert(currentRead != writeIndex_.load(std::memory_order_acquire));
-
-    auto nextRecord = currentRead + 1;
-    if (nextRecord == size_) {
-      nextRecord = 0;
-    }
-    records_[currentRead].~T();
-    readIndex_.store(nextRecord, std::memory_order_release);
-  }
-
   bool empty() const {
     return readIndex_.load(std::memory_order_acquire) ==
            writeIndex_.load(std::memory_order_acquire);
@@ -102,7 +81,7 @@ struct RingBuffer {
     if (nextRecord != readIndex_.load(std::memory_order_acquire)) {
       return false;
     }
-    // The queue is full
+
     return true;
   }
 
@@ -121,23 +100,50 @@ struct RingBuffer {
   }
 
   // Maximum number of items in the queue.
-  size_t capacity() const { return size_ - 1; }
+  size_t capacity() const {
+    return size_ - 1;
+  }
 
- private:
-#ifdef __cpp_lib_hardware_interference_size
-  static constexpr size_t kCacheLineSize =
-      std::hardware_destructive_interference_size;
-#else
-  static constexpr size_t kCacheLineSize = 64;
-#endif
-  using AtomicIndex = std::atomic<size_t>;
+  template <class... Args>
+  bool push(Args&&... recordArgs) {
+    const auto currentWrite = writeIndex_.load(std::memory_order_relaxed);
+    auto nextRecord = currentWrite + 1;
+    if (nextRecord == size_) {
+      nextRecord = 0;
+    }
+    if (nextRecord != readIndex_.load(std::memory_order_acquire)) {
+      new (&records_[currentWrite]) T(std::forward<Args>(recordArgs)...);
+      writeIndex_.store(nextRecord, std::memory_order_release);
+      return true;
+    }
 
-  char pad0_[kCacheLineSize];
-  const uint32_t size_;
-  T* const records_;
+    // The queue is full
+    return false;
+  }
 
-  alignas(kCacheLineSize) AtomicIndex readIndex_;
-  alignas(kCacheLineSize) AtomicIndex writeIndex_;
+  // The queue must not be empty
+  bool pop(T& record) {
+    if (empty()) {
+      return false;
+    }
 
-  char pad1_[kCacheLineSize - sizeof(AtomicIndex)];
+    const auto currentRead = readIndex_.load(std::memory_order_relaxed);
+    auto nextRecord = currentRead + 1;
+    if (nextRecord == size_) {
+      nextRecord = 0;
+    }
+    record = std::move(records_[currentRead]);
+    readIndex_.store(nextRecord, std::memory_order_release);
+    return true;
+  }
+
+  // Returns a pointer to the value at the front of the queue (for use in-place)
+  T* front() {
+    auto const currentRead = readIndex_.load(std::memory_order_relaxed);
+    if (currentRead == writeIndex_.load(std::memory_order_acquire)) {
+      // The queue is empty
+      return nullptr;
+    }
+    return &records_[currentRead];
+  }
 };
