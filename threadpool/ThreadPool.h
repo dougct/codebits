@@ -11,20 +11,20 @@
 
 // Implement a thread-safe queue using only a mutex and standard containers
 class BasicThreadSafeQueue {
-  std::deque<std::function<void()>> _queue;
-  std::mutex _mutex;
-  bool _done{false};
+  std::deque<std::function<void()>> queue_;
+  std::mutex mutex_;
+  bool done_{false};
 
  public:
   bool pop(std::function<void()>& x) {
     // We try to acquire the lock without blocking. If we fail, we just return.
     // The caller needs to keep trying until the call succeeds.
-    std::unique_lock<std::mutex> lock{_mutex, std::try_to_lock};
-    if (!lock || _queue.empty()) {
+    std::unique_lock<std::mutex> lock{mutex_, std::try_to_lock};
+    if (!lock || queue_.empty()) {
       return false;
     }
-    x = std::move(_queue.front());
-    _queue.pop_front();
+    x = std::move(queue_.front());
+    queue_.pop_front();
     return true;
   }
 
@@ -34,40 +34,40 @@ class BasicThreadSafeQueue {
     // fail, we just return. The caller needs to keep trying until the call
     // succeeds.
     {
-      std::unique_lock<std::mutex> lock{_mutex, std::try_to_lock};
+      std::unique_lock<std::mutex> lock{mutex_, std::try_to_lock};
       if (!lock) {
         return false;
       }
-      _queue.emplace_back(std::forward<F>(f));
+      queue_.emplace_back(std::forward<F>(f));
     }
     return true;
   }
 
   bool done() {
-    std::unique_lock<std::mutex> lock{_mutex};
-    _done = true;
+    std::unique_lock<std::mutex> lock{mutex_};
+    done_ = true;
     return true;
   }
 
   bool is_done() {
-    std::unique_lock<std::mutex> lock{_mutex};
-    return _done;
+    std::unique_lock<std::mutex> lock{mutex_};
+    return done_;
   }
 };
 
 class BasicThreadPool {
-  const unsigned _nthreads{std::thread::hardware_concurrency()};
-  std::vector<std::thread> _threads;
-  BasicThreadSafeQueue _queue;
+  const unsigned nthreads_{std::thread::hardware_concurrency()};
+  std::vector<std::thread> threads_;
+  BasicThreadSafeQueue queue_;
 
   void run() {
     while (true) {
       std::function<void()> task;
-      if (_queue.is_done()) {
+      if (queue_.is_done()) {
         break;
       }
       // Block until we're able to pop a task
-      if (!_queue.pop(task)) {
+      if (!queue_.pop(task)) {
         std::this_thread::yield();
         continue;
       }
@@ -77,15 +77,15 @@ class BasicThreadPool {
 
  public:
   BasicThreadPool() {
-    _threads.reserve(_nthreads);
-    for (unsigned i = 0; i != _nthreads; ++i) {
-      _threads.emplace_back([&]() { run(); });
+    threads_.reserve(nthreads_);
+    for (unsigned i = 0; i != nthreads_; ++i) {
+      threads_.emplace_back([&]() { run(); });
     }
   }
 
   ~BasicThreadPool() {
-    _queue.done();  // NOTE: Without this we hang in the dtor
-    for (auto& t : _threads) {
+    queue_.done();  // NOTE: Without this we hang in the dtor
+    for (auto& t : threads_) {
       t.join();
     }
   }
@@ -93,7 +93,7 @@ class BasicThreadPool {
   template <typename F>
   void submit(F&& f) {
     // Block until we're able to push a task
-    while (!_queue.push(std::forward<F>(f))) {
+    while (!queue_.push(std::forward<F>(f))) {
       std::this_thread::yield();
     }
   }
@@ -101,49 +101,49 @@ class BasicThreadPool {
 
 // Implement a thread-safe queue using a mutex and a condition variable
 class SimpleThreadSafeQueue {
-  std::deque<std::function<void()>> _queue;
-  std::mutex _mutex;
-  std::condition_variable _ready;
-  bool _done{false};
+  std::deque<std::function<void()>> queue_;
+  std::mutex mutex_;
+  std::condition_variable ready_;
+  bool done_{false};
 
  public:
   bool pop(std::function<void()>& x) {
-    std::unique_lock<std::mutex> lock{_mutex};
+    std::unique_lock<std::mutex> lock{mutex_};
     // NOTE: Without a 'done' function we wait here forever
-    while (_queue.empty() && !_done) {
-      _ready.wait(lock);  // FIXME: lock contention
+    while (queue_.empty() && !done_) {
+      ready_.wait(lock);  // FIXME: lock contention
     }
-    if (_queue.empty()) {
+    if (queue_.empty()) {
       return false;
     }
-    x = std::move(_queue.front());
-    _queue.pop_front();
+    x = std::move(queue_.front());
+    queue_.pop_front();
     return true;
   }
 
   template <typename F>
   void push(F&& f) {
     {
-      std::unique_lock<std::mutex> lock{_mutex};
-      _queue.emplace_back(std::forward<F>(f));
+      std::unique_lock<std::mutex> lock{mutex_};
+      queue_.emplace_back(std::forward<F>(f));
     }
-    _ready.notify_one();
+    ready_.notify_one();
   }
 
   void done() {
     {
-      std::unique_lock<std::mutex> lock{_mutex};
-      _done = true;
+      std::unique_lock<std::mutex> lock{mutex_};
+      done_ = true;
     }
-    _ready.notify_all();
+    ready_.notify_all();
   }
 };
 
 // Implement a thread pool using the SimpleThreadSafeQueue
 class SimpleThreadPool {
-  const unsigned _nthreads{std::thread::hardware_concurrency()};
-  std::vector<std::thread> _threads;
-  SimpleThreadSafeQueue _queue;
+  const unsigned nthreads_{std::thread::hardware_concurrency()};
+  std::vector<std::thread> threads_;
+  SimpleThreadSafeQueue queue_;
 
   void run() {
     while (true) {
@@ -151,7 +151,7 @@ class SimpleThreadPool {
       // NOTE: Without this we crash. We pass an empty function to the pop
       // function, and since the queue is empty, this task never gets
       // initialized/populated. We then try to call it, and crash.
-      if (!_queue.pop(task)) {
+      if (!queue_.pop(task)) {
         break;
       }
       task();
@@ -160,42 +160,42 @@ class SimpleThreadPool {
 
  public:
   SimpleThreadPool() {
-    _threads.reserve(_nthreads);
-    for (unsigned i = 0; i != _nthreads; ++i) {
-      _threads.emplace_back([&]() { run(); });
+    threads_.reserve(nthreads_);
+    for (unsigned i = 0; i != nthreads_; ++i) {
+      threads_.emplace_back([&]() { run(); });
     }
   }
 
   ~SimpleThreadPool() {
-    _queue.done();  // NOTE: Without this we hang in the dtor
-    for (auto& t : _threads) {
+    queue_.done();  // NOTE: Without this we hang in the dtor
+    for (auto& t : threads_) {
       t.join();
     }
   }
 
   template <typename F>
   void submit(F&& f) {
-    _queue.push(std::forward<F>(f));
+    queue_.push(std::forward<F>(f));
   }
 };
 
 // Implement a non-blocking thread-safe queue
 class ThreadSafeQueue {
-  std::deque<std::function<void()>> _queue;
-  std::mutex _mutex;
-  std::condition_variable _ready;
-  bool _done{false};
+  std::deque<std::function<void()>> queue_;
+  std::mutex mutex_;
+  std::condition_variable ready_;
+  bool done_{false};
 
  public:
   bool try_pop(std::function<void()>& x) {
     // We try to acquire the lock without blocking. If we fail, we just return.
     // The caller needs to try to pop from a different queue or wait.
-    std::unique_lock<std::mutex> lock{_mutex, std::try_to_lock};
-    if (!lock || _queue.empty()) {
+    std::unique_lock<std::mutex> lock{mutex_, std::try_to_lock};
+    if (!lock || queue_.empty()) {
       return false;
     }
-    x = std::move(_queue.front());
-    _queue.pop_front();
+    x = std::move(queue_.front());
+    queue_.pop_front();
     return true;
   }
 
@@ -203,36 +203,36 @@ class ThreadSafeQueue {
   bool try_push(F&& f) {
     // Same idea as try_pop.
     {
-      std::unique_lock<std::mutex> lock{_mutex, std::try_to_lock};
+      std::unique_lock<std::mutex> lock{mutex_, std::try_to_lock};
       if (!lock) {
         return false;
       }
-      _queue.emplace_back(std::forward<F>(f));
+      queue_.emplace_back(std::forward<F>(f));
     }
-    _ready.notify_one();
+    ready_.notify_one();
     return true;
   }
 
   void done() {
     {
-      std::unique_lock<std::mutex> lock{_mutex};
-      _done = true;
+      std::unique_lock<std::mutex> lock{mutex_};
+      done_ = true;
     }
-    _ready.notify_all();
+    ready_.notify_all();
   }
 
   bool pop(std::function<void()>& x) {
     // Block until we're able to pop a task. Used when we must pop a task from
     // this queue.
-    std::unique_lock<std::mutex> lock{_mutex};
-    while (_queue.empty() && !_done) {
-      _ready.wait(lock);
+    std::unique_lock<std::mutex> lock{mutex_};
+    while (queue_.empty() && !done_) {
+      ready_.wait(lock);
     }
-    if (_queue.empty()) {
+    if (queue_.empty()) {
       return false;
     }
-    x = std::move(_queue.front());
-    _queue.pop_front();
+    x = std::move(queue_.front());
+    queue_.pop_front();
     return true;
   }
 
@@ -240,32 +240,32 @@ class ThreadSafeQueue {
   void push(F&& f) {
     // Same idea as pop.
     {
-      std::unique_lock<std::mutex> lock{_mutex};
-      _queue.emplace_back(std::forward<F>(f));
+      std::unique_lock<std::mutex> lock{mutex_};
+      queue_.emplace_back(std::forward<F>(f));
     }
-    _ready.notify_one();
+    ready_.notify_one();
   }
 };
 
 // Implement a work-stealing thread pool
 class ThreadPool {
-  const unsigned _nthreads{std::thread::hardware_concurrency()};
-  std::vector<std::thread> _threads;
-  std::vector<ThreadSafeQueue> _queues{_nthreads};
-  std::atomic<unsigned> _index{0};
+  const unsigned nthreads_{std::thread::hardware_concurrency()};
+  std::vector<std::thread> threads_;
+  std::vector<ThreadSafeQueue> queues_{nthreads_};
+  std::atomic<unsigned> index_{0};
   const unsigned KMaxIterations = 32;
 
   void run(unsigned i) {
     while (true) {
       std::function<void()> f;
       // Try to pop from any queue that has tasks available.
-      for (unsigned n = 0; n != _nthreads * KMaxIterations; ++n) {
-        if (_queues[(i + n) % _nthreads].try_pop(f)) {
+      for (unsigned n = 0; n != nthreads_ * KMaxIterations; ++n) {
+        if (queues_[(i + n) % nthreads_].try_pop(f)) {
           break;
         }
       }
       // If we didn't find a task, try to pop from our own queue.
-      if (!f && !_queues[i].pop(f)) {
+      if (!f && !queues_[i].pop(f)) {
         break;
       }
       f();
@@ -274,31 +274,31 @@ class ThreadPool {
 
  public:
   ThreadPool() {
-    _threads.reserve(_nthreads);
-    for (unsigned n = 0; n != _nthreads; ++n) {
-      _threads.emplace_back([&, n] { run(n); });
+    threads_.reserve(nthreads_);
+    for (unsigned n = 0; n != nthreads_; ++n) {
+      threads_.emplace_back([&, n] { run(n); });
     }
   }
 
   ~ThreadPool() {
-    for (auto& e : _queues) {
+    for (auto& e : queues_) {
       e.done();
     }
-    for (auto& e : _threads) {
+    for (auto& e : threads_) {
       e.join();
     }
   }
 
   template <typename F>
   void submit(F&& f) {
-    auto i = _index++;
+    auto i = index_++;
     // Try to push to any queue that is not blocked.
-    for (unsigned n = 0; n != _nthreads; ++n) {
-      if (_queues[(i + n) % _nthreads].try_push(std::forward<F>(f))) {
+    for (unsigned n = 0; n != nthreads_; ++n) {
+      if (queues_[(i + n) % nthreads_].try_push(std::forward<F>(f))) {
         return;
       }
     }
     // If we couldn't push to any queue, push to our own queue.
-    _queues[i % _nthreads].push(std::forward<F>(f));
+    queues_[i % nthreads_].push(std::forward<F>(f));
   }
 };
