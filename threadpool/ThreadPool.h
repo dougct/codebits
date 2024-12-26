@@ -30,8 +30,9 @@ class BasicThreadSafeQueue {
 
   template <typename F>
   bool push(F&& f) {
-    // Same idea as pop. We try to acquire the lock without blocking. If we fail,
-    // we just return. The caller needs to keep trying until the call succeeds.
+    // Same idea as pop. We try to acquire the lock without blocking. If we
+    // fail, we just return. The caller needs to keep trying until the call
+    // succeeds.
     {
       std::unique_lock<std::mutex> lock{_mutex, std::try_to_lock};
       if (!lock) {
@@ -147,7 +148,9 @@ class SimpleThreadPool {
   void run() {
     while (true) {
       std::function<void()> task;
-      // NOTE: Without this we crash. We pass an empty function to the pop function, and since the queue is empty, this task never gets initialized/populated. We then try to call it, and crash.
+      // NOTE: Without this we crash. We pass an empty function to the pop
+      // function, and since the queue is empty, this task never gets
+      // initialized/populated. We then try to call it, and crash.
       if (!_queue.pop(task)) {
         break;
       }
@@ -219,7 +222,8 @@ class ThreadSafeQueue {
   }
 
   bool pop(std::function<void()>& x) {
-    // Block until we're able to pop a task. Used when we must pop a task from this queue.
+    // Block until we're able to pop a task. Used when we must pop a task from
+    // this queue.
     std::unique_lock<std::mutex> lock{_mutex};
     while (_queue.empty() && !_done) {
       _ready.wait(lock);
