@@ -1,11 +1,8 @@
-// C++ Standard Library headers
 #include <algorithm>
 #include <vector>
 
-// Third-party library headers
 #include <gtest/gtest.h>
 
-// Local project headers
 #include "rotate.h"
 #include "utils.h"
 

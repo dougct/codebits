@@ -1,17 +1,13 @@
-// C++ Standard Library headers
 #include <forward_list>
 #include <iostream>
 #include <list>
 #include <vector>
 
-// Third-party library headers
 #include <benchmark/benchmark.h>
 
-// Local project headers
 #include "rotate.h"
 #include "utils.h"
 
-// Helper function to prepare data
 template <typename Container>
 Container prepare_data(size_t n) {
   std::vector<int> nums(n, 0);
