@@ -7,7 +7,6 @@
 #include <thread>
 #include <vector>
 
-#include <iostream>
 
 class ApproxCounter {
  private:
