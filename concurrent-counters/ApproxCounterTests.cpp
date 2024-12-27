@@ -7,14 +7,14 @@
 #include "ApproxCounter.h"
 
 TEST(ApproxCounterTest, BasicUpdate) {
-  ApproxCounter counter(100, 4);  // threshold=100, num_threads=4
+  ApproxCounter counter(100, 4);  // updates_threshold=100, num_threads=4
   int64_t result = counter.update(1);
   EXPECT_EQ(result, 0);  // First update should return previous global count
   EXPECT_EQ(counter.get(), 0);
 }
 
 TEST(ApproxCounterTest, ThresholdTrigger) {
-  ApproxCounter counter(10, 1);  // Small threshold for testing
+  ApproxCounter counter(10, 1);  // Small updates_threshold for testing
   for (int i = 0; i <= 10; i++) {
     counter.update(1);
   }
@@ -24,8 +24,8 @@ TEST(ApproxCounterTest, ThresholdTrigger) {
 
 TEST(ApproxCounterTest, MultiThreadedUpdates) {
   const int num_threads = 4;
-  const int threshold = 1000;
-  ApproxCounter counter(threshold, num_threads);
+  const int updates_threshold = 1000;
+  ApproxCounter counter(updates_threshold, num_threads);
 
   std::vector<std::thread> threads;
   const int updates_per_thread = 10000;
@@ -57,13 +57,15 @@ TEST(ApproxCounterTest, RoundRobinDistribution) {
         counter.update(1);
     }
     // Each local counter should have received 2 updates
-    EXPECT_EQ(counter.get(), 0);  // No threshold reached yet
+    EXPECT_EQ(counter.get(), 0);  // No updates_threshold reached yet
+    EXPECT_EQ(counter.collect(), 6);
 }
 
 TEST(ApproxCounterTest, LargeUpdates) {
     ApproxCounter counter(2, 2);
     counter.update(500);
-    counter.update(501);  // Should trigger threshold on first local counter
+    // Should trigger updates_threshold on first local counter
+    counter.update(501);
     EXPECT_EQ(counter.get(), 501);  // Second batch should be counted
 }
 

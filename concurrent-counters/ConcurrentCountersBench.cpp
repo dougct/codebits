@@ -67,8 +67,8 @@ static void BM_ApproxCounterSingleThreaded(benchmark::State& state) {
 
 static void BM_ApproxCounterMultiThreaded(benchmark::State& state) {
   const int num_threads = state.range(0);
-  const int threshold = state.range(1);
-  ApproxCounter counter(threshold, num_threads);
+  const int updates_threshold = state.range(1);
+  ApproxCounter counter(updates_threshold, num_threads);
 
   for (auto _ : state) {
     state.PauseTiming();
@@ -109,14 +109,14 @@ static void BM_ApproxCounterMultiThreaded(benchmark::State& state) {
 BENCHMARK(BM_ExactCounterSingleThreaded);
 BENCHMARK(BM_ExactCounterMultiThreaded)
     ->RangeMultiplier(2)
-    ->Range(1, 2 * std::thread::hardware_concurrency())
+    ->Range(1, 4 * std::thread::hardware_concurrency())
     ->UseRealTime();
 
 // Register ApproxCounter benchmarks
 BENCHMARK(BM_ApproxCounterSingleThreaded);
 BENCHMARK(BM_ApproxCounterMultiThreaded)
     ->RangeMultiplier(2)
-    ->Ranges({{8, 2 * std::thread::hardware_concurrency()}, {512, 1024}})
+    ->Ranges({{1, 4 * std::thread::hardware_concurrency()}, {1024, 2028}})
     ->UseRealTime();
 
 BENCHMARK_MAIN();
