@@ -62,8 +62,8 @@ proctype counter_process(byte amount) {
 }
 
 init {
-    int i;
-	for (i : 1 .. 10) {
+    byte i;
+    for (i : 1 .. 10) {
         atomic {
             run counter_process(1);
             run counter_process(1);
