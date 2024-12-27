@@ -18,7 +18,7 @@ TEST(ApproxCounterTest, ThresholdTrigger) {
   for (int i = 0; i <= 10; i++) {
     counter.update(1);
   }
-  // After 10 updates to same local counter, it should reset
+
   EXPECT_EQ(counter.get(), 10);
 }
 
@@ -66,7 +66,8 @@ TEST(ApproxCounterTest, LargeUpdates) {
     counter.update(500);
     // Should trigger updates_threshold on first local counter
     counter.update(501);
-    EXPECT_EQ(counter.get(), 501);  // Second batch should be counted
+    counter.update(500);
+    EXPECT_EQ(counter.get(), 1001);  // Second batch should be counted
 }
 
 TEST(ApproxCounterTest, ConcurrentReads) {
