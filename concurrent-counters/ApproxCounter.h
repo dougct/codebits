@@ -13,7 +13,7 @@ class ApproxCounter {
   std::atomic<int64_t> global_counter_{0};
   std::vector<int64_t> local_counters_;
   std::vector<std::mutex> local_mutexes_;
-  std::atomic<uint64_t> num_updates_{1};
+  std::atomic<uint64_t> num_updates_{1}; // For consistency with threshold_
 
  public:
   explicit ApproxCounter(uint32_t threshold, uint32_t num_threads)
