@@ -16,8 +16,11 @@ proctype buggy_counter_process(byte amount) {
     if
     :: (num_updates >= THRESHOLD) ->
         num_updates = 0;
-        global_counter = global_counter + local_counters[idx];
-        local_counters[idx] = 0;
+        byte c;
+        for (c : 0 .. NUM_THREADS - 1) {
+            global_counter = global_counter + local_counters[c];
+            local_counters[c] = 0;
+        }
     :: else -> skip
     fi;
 }
@@ -64,19 +67,4 @@ spin -a count.pml
 clang -o pan pan.c
 ./pan
 spin -p -t -g count.pml
-
-$ spin -p -t count.pml
-
-
-int64_t update(int64_t amount) {
-    // Round-robin updating local counters
-    const uint32_t idx = num_updates_++ % num_threads_;
-    local_counters_[idx] += amount;
-    if (num_updates_ >= threshold_) {
-        global_counter_ += local_counters_[idx];
-        local_counters_[idx] = 0;
-        num_updates_ = 0;
-    }
-    return global_counter_;
-}
 */
