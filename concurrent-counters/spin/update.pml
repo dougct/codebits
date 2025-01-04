@@ -1,3 +1,5 @@
+#define USE_BUGGY_COUNTER 0 /* 1 for buggy, 0 for correct */
+
 #define NUM_THREADS 2    /* Assuming some number of threads */
 #define THRESHOLD 2     /* Assuming some threshold value */
 
@@ -53,8 +55,13 @@ init {
     byte i;
 	for (i : 1 .. 2) {
         atomic {
-            run buggy_counter_process(1);
-            run buggy_counter_process(1);
+            #ifdef USE_BUGGY_COUNTER
+                run buggy_counter_process(1);
+                run buggy_counter_process(1);
+            #else
+                run counter_process(1);
+                run counter_process(1);
+            #endif
         }
     }
     (_nr_pr == 1) -> printf("global_counter = %d\n", global_counter)
