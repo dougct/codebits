@@ -67,10 +67,9 @@ class mutex {
   std::atomic<int> val_;
 };
 
-/*
+
 // Version 3 of Drepper's paper "Futexes are Tricky"
 // Modified to use built-in functions instead of futexes
-
 class mutex3 {
  public:
   mutex3() : val_(UNLOCKED) {}
@@ -106,6 +105,5 @@ class mutex3 {
   // 2 means locked, there are waiters in lock()
   std::atomic<int> val_;
 };
-*/
 
 #endif  // MUTEX_H
