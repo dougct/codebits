@@ -19,7 +19,7 @@ int cmpxchg(std::atomic<int>* val, int expected, int desired) {
 // Modified to use built-in functions instead of futexes
 class mutex {
  public:
-  mutex() : val_(0) {}
+  mutex() : val_(UNLOCKED) {}
 
   void lock() {
     int c = cmpxchg(&val_, UNLOCKED, LOCKED);
@@ -30,7 +30,7 @@ class mutex {
         // If the mutex is locked, we signal that we're waiting by setting the
         // atom to 2. A shortcut checks is it's 2 already and avoids the atomic
         // operation in this case.
-        if (c == CONTENDED || cmpxchg(&val_, LOCKED, CONTENDED) != 0) {
+        if (c == CONTENDED || cmpxchg(&val_, LOCKED, CONTENDED) != UNLOCKED) {
           // Here we have to actually sleep, because the mutex is actually
           // locked. Note that it's not necessary to loop around this syscall;
           // a spurious wakeup will do no harm since we only exit the do...while
@@ -44,7 +44,7 @@ class mutex {
         // So we try to lock the atom again. We set teh state to 2 because we
         // can't be certain there's no other thread at this exact point. So we
         // prefer to err on the safe side.
-      } while ((c = cmpxchg(&val_, UNLOCKED, CONTENDED)) != 0);
+      } while ((c = cmpxchg(&val_, UNLOCKED, CONTENDED)) != UNLOCKED);
     }
   }
 
@@ -73,15 +73,15 @@ class mutex {
 
 class mutex3 {
  public:
-  mutex3() : val_(0) {}
+  mutex3() : val_(UNLOCKED) {}
 
   void lock() {
     int c;
-    if ((c = cmpxchg(&val_, UNLOCKED, LOCKED)) != 0) {
+    if ((c = cmpxchg(&val_, UNLOCKED, LOCKED)) != UNLOCKED) {
       if (c != CONTENDED) {
         c = val_.exchange(CONTENDED);
       }
-      while (c != 0) {
+      while (c != UNLOCKED) {
         std::atomic_wait(&val_, CONTENDED);
         c = val_.exchange(CONTENDED);
       }
