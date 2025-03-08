@@ -4,9 +4,9 @@
 #include <atomic>
 
 enum {
-    UNLOCKED,
-    LOCKED,
-    CONTENDED,
+  UNLOCKED,
+  LOCKED,
+  CONTENDED,
 };
 
 // An atomic_compare_exchange wrapper with semantics expected by the paper.
