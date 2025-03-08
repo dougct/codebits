@@ -3,9 +3,11 @@
 
 #include <atomic>
 
-#define UNLOCKED 0
-#define LOCKED 1
-#define CONTENDED 2
+enum {
+    UNLOCKED,
+    LOCKED,
+    CONTENDED,
+};
 
 // An atomic_compare_exchange wrapper with semantics expected by the paper.
 int cmpxchg(std::atomic<int>* val, int expected, int desired) {
