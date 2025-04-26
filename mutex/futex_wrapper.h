@@ -28,18 +28,10 @@
 
 #endif
 
-/**
- * Futex is an atomic 32 bit unsigned integer that provides access to the
- * futex() syscall on that value.  It is templated in such a way that it
- * can interact properly with DeterministicSchedule testing.
- *
- * If you don't know how to use futex(), you probably shouldn't be using
- * this class.  Even if you do know how, you should have a good reason
- * (and benchmarks to back you up).
- *
- * Because of the semantics of the futex syscall, the futex family of
- * functions are available as free functions rather than member functions
- */
+// Futex is an atomic 32 bit unsigned integer that provides access to the
+// futex() syscall on that value. Because of the semantics of the futex syscall,
+// the futex family of functions are available as free functions rather than
+// member functions
 
 #ifdef __linux__
 
