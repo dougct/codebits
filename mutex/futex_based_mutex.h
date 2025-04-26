@@ -1,15 +1,16 @@
-#ifndef MUTEX_H
-#define MUTEX_H
+#ifndef FUTEX_BASED_MUTEX_H
+#define FUTEX_BASED_MUTEX_H
 
-#include <atomic>
+#include "futex_wrapper.h"
 
 // Version 3 of the mutes in Drepper's "Futexes are Tricky" paper
-// Modified to use built-in functions instead of futexes
-class mutex {
+class futex_based_mutex {
  private:
   // An atomic_compare_exchange wrapper with semantics expected by the paper.
-  static int cmpxchg(std::atomic<int>* val, int expected, int desired) {
-    int* ep = &expected;
+  static uint32_t cmpxchg(std::atomic<uint32_t>* val,
+                          uint32_t expected,
+                          uint32_t desired) {
+    uint32_t* ep = &expected;
     std::atomic_compare_exchange_strong(val, ep, desired);
     return *ep;
   }
@@ -21,13 +22,13 @@ class mutex {
   };
 
   // Can hold the values UNLOCKED, LOCKED, and CONTENDED
-  std::atomic<int> val_;
+  std::atomic<uint32_t> val_;
 
  public:
-  mutex() : val_(UNLOCKED) {}
+  futex_based_mutex() : val_(UNLOCKED) {}
 
   void lock() {
-    int status = cmpxchg(&val_, UNLOCKED, LOCKED);
+    uint32_t status = cmpxchg(&val_, UNLOCKED, LOCKED);
     // We couldn't grab the lock, will have to wait...
     if (status != UNLOCKED) {
       // The lock is held by someone else. Signal that we are waiting by setting
@@ -37,7 +38,7 @@ class mutex {
       }
       while (status != UNLOCKED) {
         // Wait until the lock is no longer CONTENDED.
-        std::atomic_wait(&val_, CONTENDED);
+        futex_wait((uint32_t*)&val_, CONTENDED);
         // Here we have two cases to consider:
         //   1. The lock is LOCKED. This means that no other thread but this one
         //   is waiting on the lock. In this case, we will signal that we are
@@ -55,14 +56,14 @@ class mutex {
   void unlock() {
     if (val_.fetch_sub(1) != LOCKED) {
       val_.store(UNLOCKED);
-      std::atomic_notify_one(&val_);
+      futex_wake((uint32_t*)&val_, LOCKED);
     }
   }
 
   bool try_lock() {
-    int status = cmpxchg(&val_, UNLOCKED, LOCKED);
+    uint32_t status = cmpxchg(&val_, UNLOCKED, LOCKED);
     return status == UNLOCKED;
   }
 };
 
-#endif  // MUTEX_H
+#endif  // FUTEX_BASED_MUTEX_H

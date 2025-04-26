@@ -3,7 +3,8 @@
 #include <thread>
 #include <vector>
 
-#include "mutex.h"
+#include "futex_based_mutex.h"
+#include "portable_mutex.h"
 
 #ifndef NTHREADS
 #define NTHREADS 5
@@ -11,6 +12,10 @@
 
 #ifndef ELEMS_PER_THREAD
 #define ELEMS_PER_THREAD 1000
+#endif
+
+#ifndef PORTABLE
+#define PORTABLE 1  // Default to portable mutex if not defined
 #endif
 
 void benchmark1() {
@@ -34,7 +39,12 @@ void benchmark1() {
 }
 
 void benchmark2() {
-  mutex mutex;
+#if PORTABLE
+  portable_mutex mutex;
+#else
+  futex_based_mutex mutex;
+#endif
+
   int counter = 0;
   std::vector<std::thread> threads;
   threads.reserve(NTHREADS);
@@ -55,6 +65,12 @@ void benchmark2() {
 }
 
 int main() {
+#if PORTABLE
+  std::cout << "Testing portable mutex..." << std::endl;
+#else
+  std::cout << "Testing futex-based mutex..." << std::endl;
+#endif
+
   std::cout << "Benchmark 1 (no mutex, incorrect): " << std::endl;
   benchmark1();
 

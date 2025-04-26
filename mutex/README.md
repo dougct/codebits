@@ -1,13 +1,13 @@
 # Implementing a mutex in C++
 
-File `mutex.h` contains two implementations of mutex based on the paper "Futexes are Tricky" by Ulrich Drepper [1].
+This repository contains two implementations of mutex, both based on the paper "Futexes are Tricky" by Ulrich Drepper [1].
 
-The main difference between this implementation and the one found in [2] is that I'm actually not explicitly using futexes. I'm using native operations on std atomics to accomplish the same thing.
+One of the implementations, called futex-based mutex, uses a futex wrapper which works both on Linux and MacOS. The other implementation, called portable mutex, uses only std::atomic primitives.
 
 To run the tests, do:
 
 ```
-make all
+make all PORTABLE=1
 ./mutex_test
 ```
 
